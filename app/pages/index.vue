@@ -118,6 +118,7 @@
           <div class="flex flex-row gap-6">
             <ULink
               href="https://bsky.app/profile/kevia.me"
+              target="_blank"
               external
               class="flex items-center gap-2 text-lg md:text-xl text-gray-900 hover:text-gray-900 transition-colors group"
             >
@@ -128,6 +129,7 @@
             </ULink>
             <ULink
               href="https://www.linkedin.com/in/kevia-cloud/"
+              target="_blank"
               external
               class="flex items-center gap-2 text-lg md:text-xl text-gray-900 hover:text-gray-900 transition-colors group"
             >
