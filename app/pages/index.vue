@@ -20,8 +20,8 @@
             <h1 class="text-5xl md:text-6xl font-bold text-gray-900 leading-tight">
               Hi, I'm Kevia
             </h1>
-            <h2 class="text-5xl md:text-6xl font-bold text-gray-900 leading-tight">
-              Software Engineer
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 leading-tight">
+              Father, Husband, Software Engineer
             </h2>
           </div>
 
