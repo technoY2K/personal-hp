@@ -102,6 +102,44 @@
         </div>
       </UContainer>
     </div>
+
+    <!-- contact section -->
+    <div class="w-full bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 py-16 md:py-24">
+      <UContainer>
+        <div class="max-w-4xl mx-auto">
+          <h2 class="text-4xl md:text-5xl font-bold text-gray-900 text-left mb-6">
+            Contact
+          </h2>
+          <p class="text-lg md:text-xl text-gray-700 text-left max-w-2xl mb-8">
+            If these questions and problems interest you, let's connect!
+          </p>
+          
+          <!-- social links -->
+          <div class="flex flex-row gap-6">
+            <ULink
+              href="https://bsky.app/profile/kevia.me"
+              external
+              class="flex items-center gap-2 text-lg md:text-xl text-gray-900 hover:text-gray-900 transition-colors group"
+            >
+              <UIcon name="i-simple-icons-bluesky" class="w-6 h-6 text-gray-600 group-hover:text-gray-900 transition-colors" />
+              <span class="border-b-2 border-transparent group-hover:border-green-500 transition-colors">
+                Bluesky
+              </span>
+            </ULink>
+            <ULink
+              href="https://www.linkedin.com/in/kevia-cloud/"
+              external
+              class="flex items-center gap-2 text-lg md:text-xl text-gray-900 hover:text-gray-900 transition-colors group"
+            >
+              <UIcon name="i-simple-icons-linkedin" class="w-6 h-6 text-gray-600 group-hover:text-gray-900 transition-colors" />
+              <span class="border-b-2 border-transparent group-hover:border-green-500 transition-colors">
+                LinkedIn
+              </span>
+            </ULink>
+          </div>
+        </div>
+      </UContainer>
+    </div>
   </div>
 </template>
 
