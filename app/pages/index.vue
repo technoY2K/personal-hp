@@ -115,7 +115,7 @@
           </p>
           
           <!-- social links -->
-          <div class="flex flex-row gap-6">
+          <div class="flex flex-col md:flex-row gap-4 md:gap-6">
             <ULink
               href="https://github.com/technoY2K"
               target="_blank"
