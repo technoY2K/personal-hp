@@ -98,6 +98,14 @@
                 </span>
               </ULink>
             </li>
+            <li>
+              <span class="flex items-center gap-3 text-lg md:text-xl text-gray-900 hover:text-gray-900 transition-colors group">
+                <span class="text-gray-600 group-hover:text-gray-900">→</span>
+                <span class="border-b-2 border-transparent group-hover:border-green-500 transition-colors">
+                  Coming Soon: Local Neighborhood AI assistant chatbot
+                </span>
+              </span>
+            </li>
           </ul>
         </div>
       </UContainer>
