@@ -1,10 +1,22 @@
-const COLORS = ["#f5e642", "#ffffff", "#e84545", "#4d8dff"] as const;
+const COLORS = ["#ffffff"] as const;
 
 const SPARKLE_COUNT = 56;
 const GLOW_CHANCE = 0.32;
 const MIN_DURATION_MS = 1400;
 const MAX_DURATION_MS = 2800;
 const MAX_DELAY_MS = 500;
+
+const SHOOTING_STAR_INTERVAL_MS = 2000;
+const SHOOTING_STAR_LIFETIME_MS = 900;
+const SHOOTING_STAR_TRAIL_PX = 110;
+
+type ShootingStar = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  born: number;
+};
 
 type Sparkle = {
   startX: number;
@@ -88,6 +100,58 @@ function drawSparkle(
   ctx.fill();
 }
 
+function createShootingStar(width: number, height: number, now: number): ShootingStar {
+  const speed = randomBetween(0.5, 0.85); // px per ms
+  const angle = randomBetween(Math.PI / 9, Math.PI / 5); // shallow dive below horizontal
+  const direction = Math.random() < 0.5 ? 1 : -1;
+
+  return {
+    x: randomBetween(width * 0.1, width * 0.9),
+    y: randomBetween(height * 0.05, height * 0.5),
+    vx: Math.cos(angle) * speed * direction,
+    vy: Math.sin(angle) * speed,
+    born: now,
+  };
+}
+
+// returns false once the star has burned out so it can be culled
+function drawShootingStar(ctx: CanvasRenderingContext2D, star: ShootingStar, now: number): boolean {
+  const age = now - star.born;
+  const t = age / SHOOTING_STAR_LIFETIME_MS;
+  if (t >= 1) return false;
+
+  const x = star.x + star.vx * age;
+  const y = star.y + star.vy * age;
+
+  // quick fade in, longer fade out
+  const alpha = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
+
+  const speed = Math.hypot(star.vx, star.vy);
+  const tailX = x - (star.vx / speed) * SHOOTING_STAR_TRAIL_PX;
+  const tailY = y - (star.vy / speed) * SHOOTING_STAR_TRAIL_PX;
+
+  const gradient = ctx.createLinearGradient(x, y, tailX, tailY);
+  gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+  gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+  ctx.save();
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(tailX, tailY);
+  ctx.stroke();
+
+  ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+  ctx.beginPath();
+  ctx.arc(x, y, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  return true;
+}
+
 function resizeCanvas(canvas: HTMLCanvasElement): { width: number; height: number } {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const width = window.innerWidth;
@@ -116,6 +180,8 @@ export function initSparkles(canvas: HTMLCanvasElement): void {
   let startTime: number | null = null;
   let settled = prefersReducedMotion;
   let frameId = 0;
+  let shootingStars: ShootingStar[] = [];
+  let lastShootingStarAt = 0;
 
   const paintFrame = (now: number, animateGlow: boolean) => {
     ctx.clearRect(0, 0, width, height);
@@ -166,6 +232,13 @@ export function initSparkles(canvas: HTMLCanvasElement): void {
 
   const tick = (now: number) => {
     paintFrame(now, !prefersReducedMotion);
+
+    if (now - lastShootingStarAt >= SHOOTING_STAR_INTERVAL_MS) {
+      shootingStars.push(createShootingStar(width, height, now));
+      lastShootingStarAt = now;
+    }
+    shootingStars = shootingStars.filter((star) => drawShootingStar(ctx, star, now));
+
     frameId = requestAnimationFrame(tick);
   };
 
