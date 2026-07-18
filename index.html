@@ -25,45 +25,26 @@
     <title>Kevia | Software Engineer</title>
   </head>
   <body>
-    <main>
-      <section class="hero section">
-        <div class="container hero__content">
-          <img
-            src="/8bit_hero.webp"
-            alt="8-bit portrait of Kevia"
-            width="128"
-            height="128"
-            class="hero__image"
-          />
+    <canvas id="sparkles" class="sparkles" aria-hidden="true"></canvas>
 
-          <div class="hero__headline">
-            <h1>Hi, I'm Kevia</h1>
-            <p>Father, Husband, Software Engineer</p>
-          </div>
-        </div>
-      </section>
+    <main class="page">
+      <section class="card" aria-label="About Kevia">
+        <h1 class="card__name">Hi, I'm Kevia</h1>
+        <p class="card__role">Father, Husband, Software Engineer</p>
+        <p class="card__currently">
+          Currently exploring the cross section of Agentic commerce and Blockchain.
+        </p>
 
-      <section class="section" aria-labelledby="about-heading">
-        <div class="container">
-          <h2 id="about-heading" class="section-heading">Currently</h2>
-          <p class="section-copy">
-            I'm working on the convergence of AI and blockchain technology.
-          </p>
-        </div>
-      </section>
-
-      <section class="section section--accent" aria-labelledby="contact-heading">
-        <div class="container">
-          <h2 id="contact-heading" class="section-heading">Contact</h2>
-          <p class="contact-copy">Let's connect!</p>
-
-          <nav class="social-links" aria-label="Social links">
-            <a href="https://github.com/technoY2K" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a href="https://bsky.app/profile/kevia.me" target="_blank" rel="noopener noreferrer">Bluesky</a>
-            <a href="https://www.linkedin.com/in/kevia-cloud/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-          </nav>
-        </div>
+        <nav class="card__links" aria-label="Social links">
+          <a href="https://github.com/technoY2K" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <span class="card__sep" aria-hidden="true">·</span>
+          <a href="https://bsky.app/profile/kevia.me" target="_blank" rel="noopener noreferrer">Bluesky</a>
+          <span class="card__sep" aria-hidden="true">·</span>
+          <a href="https://www.linkedin.com/in/kevia-cloud/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        </nav>
       </section>
     </main>
+
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
