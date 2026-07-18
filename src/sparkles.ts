@@ -6,7 +6,8 @@ const MIN_DURATION_MS = 1400;
 const MAX_DURATION_MS = 2800;
 const MAX_DELAY_MS = 500;
 
-const SHOOTING_STAR_INTERVAL_MS = 2000;
+const SHOOTING_STAR_MIN_GAP_MS = 3000;
+const SHOOTING_STAR_MAX_GAP_MS = 6000;
 const SHOOTING_STAR_LIFETIME_MS = 900;
 const SHOOTING_STAR_TRAIL_PX = 110;
 
@@ -28,8 +29,6 @@ type Sparkle = {
   delay: number;
   duration: number;
   glows: boolean;
-  glowPhase: number;
-  glowPeriodMs: number;
 };
 
 function easeOutCubic(t: number): number {
@@ -40,12 +39,18 @@ function randomBetween(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
+function prefersStaticSparkles(): boolean {
+  return (
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+    window.matchMedia("(max-width: 767px)").matches
+  );
+}
+
 function createSparkles(width: number, height: number): Sparkle[] {
   const sparkles: Sparkle[] = [];
 
   for (let i = 0; i < SPARKLE_COUNT; i++) {
     const color = COLORS[Math.floor(Math.random() * COLORS.length)] ?? COLORS[0];
-    // same x for start and end so they rise straight up
     const x = randomBetween(0, width);
 
     sparkles.push({
@@ -58,20 +63,10 @@ function createSparkles(width: number, height: number): Sparkle[] {
       delay: randomBetween(0, MAX_DELAY_MS),
       duration: randomBetween(MIN_DURATION_MS, MAX_DURATION_MS),
       glows: Math.random() < GLOW_CHANCE,
-      glowPhase: randomBetween(0, Math.PI * 2),
-      glowPeriodMs: randomBetween(2400, 4800),
     });
   }
 
   return sparkles;
-}
-
-function glowAmount(sparkle: Sparkle, now: number, animate: boolean): number {
-  if (!sparkle.glows) return 0;
-  if (!animate) return 0.55;
-
-  const wave = Math.sin((now / sparkle.glowPeriodMs) * Math.PI * 2 + sparkle.glowPhase);
-  return 0.25 + (wave + 1) * 0.35;
 }
 
 function drawSparkle(
@@ -85,11 +80,11 @@ function drawSparkle(
   if (glow > 0) {
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur = 6 + glow * 10;
-    ctx.globalAlpha = 0.55 + glow * 0.45;
+    ctx.shadowBlur = 8;
+    ctx.globalAlpha = 0.7;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(x, y, size * (1 + glow * 0.35), 0, Math.PI * 2);
+    ctx.arc(x, y, size * 1.15, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -101,20 +96,20 @@ function drawSparkle(
 }
 
 function createShootingStar(width: number, height: number, now: number): ShootingStar {
-  const speed = randomBetween(0.5, 0.85); // px per ms
-  const angle = randomBetween(Math.PI / 9, Math.PI / 5); // shallow dive below horizontal
+  const speed = randomBetween(0.5, 0.85);
+  const angle = randomBetween(Math.PI / 9, Math.PI / 5);
   const direction = Math.random() < 0.5 ? 1 : -1;
 
   return {
     x: randomBetween(width * 0.1, width * 0.9),
-    y: randomBetween(height * 0.05, height * 0.5),
+    y: randomBetween(height * 0.05, height * 0.45),
     vx: Math.cos(angle) * speed * direction,
     vy: Math.sin(angle) * speed,
     born: now,
   };
 }
 
-// returns false once the star has burned out so it can be culled
+// returns false once the star has burned out
 function drawShootingStar(ctx: CanvasRenderingContext2D, star: ShootingStar, now: number): boolean {
   const age = now - star.born;
   const t = age / SHOOTING_STAR_LIFETIME_MS;
@@ -122,8 +117,6 @@ function drawShootingStar(ctx: CanvasRenderingContext2D, star: ShootingStar, now
 
   const x = star.x + star.vx * age;
   const y = star.y + star.vy * age;
-
-  // quick fade in, longer fade out
   const alpha = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
 
   const speed = Math.hypot(star.vx, star.vy);
@@ -174,33 +167,70 @@ export function initSparkles(canvas: HTMLCanvasElement): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let staticMode = prefersStaticSparkles();
   let { width, height } = resizeCanvas(canvas);
   let sparkles = createSparkles(width, height);
   let startTime: number | null = null;
-  let settled = prefersReducedMotion;
+  let settled = staticMode;
   let frameId = 0;
-  let shootingStars: ShootingStar[] = [];
-  let lastShootingStarAt = 0;
+  let starTimerId = 0;
+  let activeStar: ShootingStar | null = null;
 
-  const paintFrame = (now: number, animateGlow: boolean) => {
+  const paintSettled = () => {
     ctx.clearRect(0, 0, width, height);
+    for (const sparkle of sparkles) {
+      const glow = !staticMode && sparkle.glows ? 1 : 0;
+      drawSparkle(ctx, sparkle.endX, sparkle.endY, sparkle.size, sparkle.color, glow);
+    }
+  };
 
-    if (settled || prefersReducedMotion) {
-      for (const sparkle of sparkles) {
-        drawSparkle(
-          ctx,
-          sparkle.endX,
-          sparkle.endY,
-          sparkle.size,
-          sparkle.color,
-          glowAmount(sparkle, now, animateGlow),
-        );
-      }
-      return true;
+  const clearStarTimer = () => {
+    window.clearTimeout(starTimerId);
+    starTimerId = 0;
+  };
+
+  const stopAnimation = () => {
+    cancelAnimationFrame(frameId);
+    frameId = 0;
+    activeStar = null;
+  };
+
+  const scheduleNextShootingStar = () => {
+    if (staticMode || !settled) return;
+
+    clearStarTimer();
+    const delay = randomBetween(SHOOTING_STAR_MIN_GAP_MS, SHOOTING_STAR_MAX_GAP_MS);
+    starTimerId = window.setTimeout(() => {
+      if (staticMode || !settled) return;
+      activeStar = createShootingStar(width, height, performance.now());
+      frameId = requestAnimationFrame(starTick);
+    }, delay);
+  };
+
+  const starTick = (now: number) => {
+    if (!activeStar || staticMode) {
+      activeStar = null;
+      paintSettled();
+      return;
     }
 
+    paintSettled();
+    const alive = drawShootingStar(ctx, activeStar, now);
+
+    if (!alive) {
+      activeStar = null;
+      paintSettled();
+      scheduleNextShootingStar();
+      return;
+    }
+
+    frameId = requestAnimationFrame(starTick);
+  };
+
+  const tick = (now: number) => {
     if (startTime === null) startTime = now;
+
+    ctx.clearRect(0, 0, width, height);
 
     let allSettled = true;
     const elapsed = now - startTime;
@@ -221,32 +251,21 @@ export function initSparkles(canvas: HTMLCanvasElement): void {
 
       const x = sparkle.startX + (sparkle.endX - sparkle.startX) * t;
       const y = sparkle.startY + (sparkle.endY - sparkle.startY) * t;
-      // start soft glow once a sparkle is mostly in place
-      const glow = t > 0.85 ? glowAmount(sparkle, now, animateGlow) * ((t - 0.85) / 0.15) : 0;
+      const glow = sparkle.glows && t > 0.85 ? (t - 0.85) / 0.15 : 0;
       drawSparkle(ctx, x, y, sparkle.size, sparkle.color, glow);
     }
 
-    if (allSettled) settled = true;
-    return allSettled;
-  };
-
-  const tick = (now: number) => {
-    paintFrame(now, !prefersReducedMotion);
-
-    if (now - lastShootingStarAt >= SHOOTING_STAR_INTERVAL_MS) {
-      shootingStars.push(createShootingStar(width, height, now));
-      lastShootingStarAt = now;
+    if (allSettled) {
+      settled = true;
+      paintSettled();
+      scheduleNextShootingStar();
+      return;
     }
-    shootingStars = shootingStars.filter((star) => drawShootingStar(ctx, star, now));
 
     frameId = requestAnimationFrame(tick);
   };
 
-  const onResize = () => {
-    const prevWidth = width;
-    const prevHeight = height;
-    ({ width, height } = resizeCanvas(canvas));
-
+  const rescaleSparkles = (prevWidth: number, prevHeight: number) => {
     for (const sparkle of sparkles) {
       const x = (sparkle.endX / prevWidth) * width;
       sparkle.startX = x;
@@ -254,18 +273,49 @@ export function initSparkles(canvas: HTMLCanvasElement): void {
       sparkle.startY = height + randomBetween(4, 28);
       sparkle.endY = (sparkle.endY / prevHeight) * height;
     }
+  };
 
-    if (!settled) {
-      cancelAnimationFrame(frameId);
+  const onResize = () => {
+    const prevWidth = width;
+    const prevHeight = height;
+    const nextStatic = prefersStaticSparkles();
+    ({ width, height } = resizeCanvas(canvas));
+    rescaleSparkles(prevWidth, prevHeight);
+
+    stopAnimation();
+    clearStarTimer();
+
+    if (nextStatic) {
+      staticMode = true;
+      settled = true;
+      paintSettled();
+      return;
+    }
+
+    if (staticMode && !nextStatic) {
+      staticMode = false;
+      settled = false;
       startTime = null;
       frameId = requestAnimationFrame(tick);
+      return;
     }
+
+    staticMode = false;
+
+    if (settled) {
+      paintSettled();
+      scheduleNextShootingStar();
+      return;
+    }
+
+    startTime = null;
+    frameId = requestAnimationFrame(tick);
   };
 
   window.addEventListener("resize", onResize);
 
-  if (prefersReducedMotion) {
-    paintFrame(0, false);
+  if (staticMode) {
+    paintSettled();
     return;
   }
 
